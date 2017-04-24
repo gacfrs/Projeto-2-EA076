@@ -16,8 +16,11 @@ int sensorValue = 0;        // value read from the pot
 
 /**EEPROM**/
 int n_elements;
-int address;
 #define Index 0
+
+/**Teclado Matricial**/
+const int L[3];
+const int C[2];
 
 /******************************************************** CODIGO PRONTO DO TAVARES***************************************/
 /* Rotina auxiliar para comparacao de strings */
@@ -82,18 +85,18 @@ void serialEvent() {
 /******************************************************** FIM CODIGO PRONTO DO TAVARES***************************************/
 
 /************************************************************ EEPROM *********************************************************/
-void write_byte (int ee_address, char data) {
+void write_byte (int address, char data) {
   Wire.beginTransmission(0x50);
-  Wire.write(ee_address);
+  Wire.write(address);
   Wire.write(data);
   Wire.endTransmission();
   delay(5);
 }
 
-char read_byte (int ee_address) {
+char read_byte (int address) {
   byte rdata;
   Wire.beginTransmission(0x50);
-  Wire.write(ee_address);
+  Wire.write(address);
   Wire.endTransmission();
   Wire.requestFrom(0x50, 1);
 
@@ -104,6 +107,63 @@ char read_byte (int ee_address) {
 }
 /************************************************************ FIM EEPROM *********************************************************/
 
+/************************************************************************ TECLADO MATRICIAL **************************************/
+void setup_teclado() {
+  pinMode(L[0], OUTPUT);
+  pinMode(L[1], OUTPUT);
+  pinMode(L[2], OUTPUT);
+  pinMode(L[3], OUTPUT);
+
+  pinMode(C[0], INPUT_PULLUP);
+  pinMode(C[1], INPUT_PULLUP);
+  pinMode(C[2], INPUT_PULLUP);
+
+  digitalWrite(L[0], HIGH);
+  digitalWrite(L[1], HIGH);
+  digitalWrite(L[2], HIGH);
+  digitalWrite(L[3], HIGH);
+}
+/*
+char caracter(int linha, int coluna){
+  if(L[0] && L[1]
+}
+
+/*
+int Varredura(){
+  int i, j, coluna;
+  for(i=0; i<=3; i++){
+    digitalWrite(L[i], LOW);
+    for(j=0; j<=2; j++){
+      coluna = digitalRead(C[j]);
+      if (!coluna)
+    }
+  }
+}
+
+função Varredura();
+  Para cada pino de saída x[i]:
+    Configura x[i] como ativo;
+    Para cada pino de entrada y[j]:
+      Se y[j] está ativo:
+        retorna caractere na posição (i,j);
+    Configura x[i] como inativo;
+
+função interrupção_periodica();
+  Se nao estou em deboucing:
+    A=Varredura();
+    Se A é um caractere válido:
+      Camada_de_aplicação(A);
+      muda para modo debouncing;
+      contador_deboucing recebe maximo;
+Se estou em debouycing:
+//Porcesso analogo ao scheduling
+  Decremento contador_deboucing;
+  Se contador_deboucning é zero:
+    sai do modo deboucing;
+
+
+/*********************************************************************END TECLADO MATRICIAL **************************************/
+
 /* Funcoes internas ao void main() */
 void setup() {
   /* Inicializacao */
@@ -111,6 +171,7 @@ void setup() {
   flag_check_command = 0;
   Serial.begin(9600);
   Wire.begin();
+  setup_teclado();
 }
 
 void loop() {
@@ -168,7 +229,7 @@ void loop() {
          incrementa o x[Index] */
 
       sensorValue = analogRead(analogInPin);
-      n_elements = read_byte(Index)+1;
+      n_elements = read_byte(Index) + 1;
       write_byte(n_elements, sensorValue);
       flag_write = 1;
     }
@@ -209,21 +270,5 @@ void loop() {
   6(SCL)- A5 - carrega o sinal de clock
   7(WP)- Gnd
   8(Vcc)- Vcc
-
-  colocar indice no byte 0 - quantos elementos estao gravados na memoria
-  analisar o estado inicial e entao usar a proxima posição
-  para formatar - escrever 0 na posição de índice
-
-  Master envia o endereço do slave
-  envia o que quiser
-  manda parar
-
-  /* Escreve dado numa posição da memória **
-  void write_byte(int posição, char dado);
-
-  /* Le dado de uma posição da memória **
-  char read_byte(int posição);
-
-
 
 ***/
