@@ -12,7 +12,7 @@
 /****************************************************** Declaração de variáveis *********************************************/
 /**Conversor ADC**/
 const int analogInPin = A0;  // Analog input pin that the potentiometer is attached to
-int sensorValue = 0;        // value read from the pot
+unsigned int sensorValue;        // value read from the pot
 
 /**EEPROM**/
 int n_elements;
@@ -124,12 +124,12 @@ void setup_teclado() {
   digitalWrite(L[3], HIGH);
 }
 /*
-char caracter(int linha, int coluna){
+  char caracter(int linha, int coluna){
   if(L[0] && L[1]
-}
+  }
 
-/*
-int Varredura(){
+  /*
+  int Varredura(){
   int i, j, coluna;
   for(i=0; i<=3; i++){
     digitalWrite(L[i], LOW);
@@ -138,9 +138,9 @@ int Varredura(){
       if (!coluna)
     }
   }
-}
+  }
 
-função Varredura();
+  função Varredura();
   Para cada pino de saída x[i]:
     Configura x[i] como ativo;
     Para cada pino de entrada y[j]:
@@ -148,21 +148,21 @@ função Varredura();
         retorna caractere na posição (i,j);
     Configura x[i] como inativo;
 
-função interrupção_periodica();
+  função interrupção_periodica();
   Se nao estou em deboucing:
     A=Varredura();
     Se A é um caractere válido:
       Camada_de_aplicação(A);
       muda para modo debouncing;
       contador_deboucing recebe maximo;
-Se estou em debouycing:
-//Porcesso analogo ao scheduling
+  Se estou em debouycing:
+  //Porcesso analogo ao scheduling
   Decremento contador_deboucing;
   Se contador_deboucning é zero:
     sai do modo deboucing;
 
 
-/*********************************************************************END TECLADO MATRICIAL **************************************/
+  /*********************************************************************END TECLADO MATRICIAL **************************************/
 
 /* Funcoes internas ao void main() */
 void setup() {
@@ -175,7 +175,7 @@ void setup() {
 }
 
 void loop() {
-  int x, y, n;
+  int x, y, memoria;
   char out_buffer[20];
   int flag_write = 0;
 
@@ -199,44 +199,45 @@ void loop() {
 
     else if (str_cmp(Buffer.data, "MEASURE", 7)) {          //OK
       // read the analog in value:
-      sensorValue = analogRead(analogInPin);
+      sensorValue = map(analogRead(analogInPin), 0, 1023, 0, 255);
+
 
       // print the results to the serial monitor:
       sprintf(out_buffer, "MEASURE = %d\n", sensorValue);
       flag_write = 1;
     }
 
-    else if (str_cmp(Buffer.data, "MEMSTATUS", 9)) {        //FALTA TESTAR
+    else if (str_cmp(Buffer.data, "MEMSTATUS", 9)) {        //OK
       n_elements = read_byte(Index);
       sprintf(out_buffer, "MEMSTATUS = %d\n", n_elements);
       flag_write = 1;
     }
 
-    else if (str_cmp(Buffer.data, "RESET", 5)) {           //FALTA TESTAR
+    else if (str_cmp(Buffer.data, "RESET", 5)) {           //OK
       write_byte(Index, (int) 0);
-      /*
-          n_elements = read_byte(Index);
-          sprintf(out_buffer, "RESET = %d\n", n_elements);
-      */
+      n_elements = read_byte(Index);
+      sprintf(out_buffer, "RESET = %d\n", n_elements);
       flag_write = 1;
     }
 
-    else if (str_cmp(Buffer.data, "RECORD", 6)) {           //FALTA TESTAR
-      /* lê o sensor
-         lê a posiçao do indice
-         grava numa posição
-         tentar entender direito o  N*x[Index]+1
-         incrementa o x[Index] */
-
-      sensorValue = analogRead(analogInPin);
+    else if (str_cmp(Buffer.data, "RECORD", 6)) {           //ok
+      sensorValue = map(analogRead(analogInPin), 0, 1023, 0, 255);
       n_elements = read_byte(Index) + 1;
       write_byte(n_elements, sensorValue);
+      write_byte(Index, n_elements);
+      sprintf(out_buffer, "RECORDED %d\n", sensorValue);
       flag_write = 1;
     }
 
-    else if (str_cmp(Buffer.data, "GET N", 5)) {                // FALTA TESTAR
-      sscanf(Buffer.data, "%*s %d", &n);
-      sprintf(out_buffer, "GET N = %c\n", read_byte(n));
+    else if (str_cmp(Buffer.data, "GET", 3)) {                // OKKKKK RUMO AO GG
+      sscanf(Buffer.data, "%*s %d", &x);
+
+      if (x > n_elements)
+        sprintf(out_buffer, "ESPACO DE MEMORIA NAO GRAVADO \n");
+      else {
+        memoria = read_byte(x);
+        sprintf(out_buffer, "GET %d = %d\n", x, memoria);
+      }
       flag_write = 1;
     }
 
@@ -270,5 +271,8 @@ void loop() {
   6(SCL)- A5 - carrega o sinal de clock
   7(WP)- Gnd
   8(Vcc)- Vcc
+
+  0000001101000111
+  01000111
 
 ***/
