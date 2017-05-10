@@ -2,32 +2,28 @@
   Baseado no programa do Prof.Tiago F. Tavares
   Dimitri Reis
   Guilherme Frauches
-  FALTA CORRIGIR : GET N mostrando valores de 7 bits no lugar de 8 (overrflow negativop)
-                usar fla_check para teclado matricial ?
-                led piscando sem delay
-                tirar os prints onde nao devem estar la (prints anteriores da memoria do buffer ... buffer_clean ta funcinando direito ??)
-                comentar
-                fazer video
+  FALTA CORRIGIR :
 */
 
 #include <stdio.h>
 #include <EEPROM.h>
 #include <Wire.h>
 #include <Keypad.h>
+#include "TimerOne.h"
 
 /****************************************************** Declaração de variáveis *********************************************/
 /**Conversor ADC**/
 const int analogInPin = A0;  // Analog input pin that the potentiometer is attached to
-unsigned int sensorValue;        // value read from the pot
+unsigned int sensorValue; // value read from the pot
 
 /**EEPROM**/
 unsigned int n_elements;
 #define Index 0
 
 /**Teclado Matricial**/
-
 #define ledPin 13
-int k = 0, med_auto = 0;
+int k = 0, med_auto = 0, pisca = 0;
+int timer = 0;
 
 /******************************************************** CODIGO PRONTO DO TAVARES***************************************/
 /* Rotina auxiliar para comparacao de strings */
@@ -92,7 +88,7 @@ void serialEvent() {
 /******************************************************** FIM CODIGO PRONTO DO TAVARES***************************************/
 
 /************************************************************ EEPROM *********************************************************/
-void write_byte (int address, char data) {
+void write_byte (unsigned int address, char data) {
   Wire.beginTransmission(0x50);
   Wire.write(address);
   Wire.write(data);
@@ -100,8 +96,8 @@ void write_byte (int address, char data) {
   delay(5);
 }
 
-char read_byte (int address) {
-  byte rdata;
+byte read_byte (unsigned int address) {
+  byte rdata = 0xF;
   Wire.beginTransmission(0x50);
   Wire.write(address);
   Wire.endTransmission();
@@ -142,14 +138,31 @@ void setup() {
   /* Inicializacao */
   pinMode(ledPin, OUTPUT);
   digitalWrite(ledPin, LOW);
+
   buffer_clean();
   flag_check_command = 0;
+
+  Timer1.initialize();
+  Timer1.attachInterrupt(Int_Timer);
+
   Serial.begin(9600);
   Wire.begin();
+
+
 }
 
+void Int_Timer () {
+  // read the analog in value:
+  sensorValue = analogRead(analogInPin) / 4;
+  if (pisca)
+    digitalWrite(13, digitalRead(13) ^ 1);
+  else
+    digitalWrite (13, LOW);
+}
+
+
 void loop() {
-  int x, y, pisca = 0, timer, i;
+  int x, y;
   unsigned int memoria;
   char out_buffer[20], teclado[2];
   int flag_write = 0;
@@ -174,7 +187,6 @@ void loop() {
       }
 
       else if (str_cmp(teclado, "#2*", 3)) { //Realiza uma medição e grava o valor na memória
-        sensorValue = analogRead(analogInPin) / 4;
         n_elements = read_byte(Index) + 1;
         write_byte(n_elements, sensorValue);
         write_byte(Index, n_elements);
@@ -196,24 +208,8 @@ void loop() {
     }
   }
 
-  if (pisca) {
-    if (digitalRead(ledPin) == HIGH)
-      digitalWrite(ledPin, LOW);
-    else
-      digitalWrite(ledPin, HIGH);
-    delay(200);
-    digitalWrite(ledPin, LOW);
-    delay(200);
-    digitalWrite(ledPin, HIGH);
-    delay(200);
-    digitalWrite(ledPin, LOW);
-  }
-
 
   if (med_auto) {
-    // read the analog in value:
-    sensorValue = analogRead(analogInPin) / 4;
-
     // print the results to the serial monitor:
     sprintf(out_buffer, "MEASURE = %d\n", sensorValue);
     flag_write = 1;
@@ -242,9 +238,6 @@ void loop() {
     }
 
     else if (str_cmp(Buffer.data, "MEASURE", 7)) {          //OK
-      // read the analog in value:
-      sensorValue = analogRead(analogInPin) / 4;
-
       // print the results to the serial monitor:
       sprintf(out_buffer, "MEASURE = %d\n", sensorValue);
       flag_write = 1;
@@ -299,20 +292,3 @@ void loop() {
   }
 
 }
-
-/***
-  rEFERENCIAS^: https://www.arduino.cc/en/Tutorial/EEPROMWrite
-  http://www.hobbytronics.co.uk/arduino-external-eeprom
-  http://pdf.datasheetcatalog.com/datasheet/atmel/doc0180.pdf
-  Pino EEEPROM - Arduino
-  1(A0)- gnd
-  2(A1)- gnd
-  3(A2)- gnd
-  4(Vss)- Gnd
-  5(SDA)- A4 - trafegam os dados
-  6(SCL)- A5 - carrega o sinal de clock
-  7(WP)- Gnd
-  8(Vcc)- Vcc
-  0000001101000111
-  01000111
-*/
