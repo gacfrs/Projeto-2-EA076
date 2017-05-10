@@ -2,7 +2,6 @@
   Baseado no programa do Prof.Tiago F. Tavares
   Dimitri Reis
   Guilherme Frauches
-
   FALTA CORRIGIR : GET N mostrando valores de 7 bits no lugar de 8 (overrflow negativop)
                 usar fla_check para teclado matricial ?
                 led piscando sem delay
@@ -22,7 +21,7 @@ const int analogInPin = A0;  // Analog input pin that the potentiometer is attac
 unsigned int sensorValue;        // value read from the pot
 
 /**EEPROM**/
-int n_elements;
+unsigned int n_elements;
 #define Index 0
 
 /**Teclado Matricial**/
@@ -150,7 +149,8 @@ void setup() {
 }
 
 void loop() {
-  int x, y, memoria, pisca = 0, timer, i;
+  int x, y, pisca = 0, timer, i;
+  unsigned int memoria;
   char out_buffer[20], teclado[2];
   int flag_write = 0;
 
@@ -162,7 +162,6 @@ void loop() {
   {
     teclado[k] = tecla_pressionada;
     k++;
-
     if (k > 2) {
       /**************************** FALTA TESTAR ************************/
       if (str_cmp(teclado, "#1*", 3)) { //Pisca um led dizendo que o sitema esta responsivo
@@ -170,6 +169,7 @@ void loop() {
           pisca = 0;
         else
           pisca = 1;
+        sprintf(out_buffer, "");
         flag_write = 1;
       }
 
@@ -190,41 +190,11 @@ void loop() {
       else if (str_cmp(teclado, "#4*", 3)) { //Encerra o modo de medição automática
         med_auto = 0;
         flag_write = 1;
+        sprintf(out_buffer, "");
       }
-      /********************************************FIM FALTA TESTAR ****************/
-
       k = 0;
-
     }
-
   }
-
-
-  /* char tecla_pressionada = meuteclado.getKey();
-    if (tecla_pressionada) {
-     teclado[k] = tecla_pressionada;
-     Serial.println(tecla_pressionada);
-     k++;
-     if (k > 2) {
-       k = 0;
-       flag_check_command == 1;
-     }
-    }
-  */
-
-
-  /*
-    if (pisca) {
-      if (digitalRead(ledPin) == HIGH)
-        digitalWrite(ledPin, LOW);
-      else
-        digitalWrite(ledPin, HIGH);
-      for (timer = 0; timer <= 1000; timer++){
-        delay(1);
-
-      }
-    }
-  */
 
   if (pisca) {
     if (digitalRead(ledPin) == HIGH)
@@ -237,8 +207,6 @@ void loop() {
     digitalWrite(ledPin, HIGH);
     delay(200);
     digitalWrite(ledPin, LOW);
-
-
   }
 
 
@@ -291,7 +259,7 @@ void loop() {
     else if (str_cmp(Buffer.data, "RESET", 5)) {           //OK
       write_byte(Index, (int) 0);
       n_elements = read_byte(Index);
-      sprintf(out_buffer, "RESET = %d\n", n_elements);
+      sprintf(out_buffer, "RESETED\n");
       flag_write = 1;
     }
 
@@ -325,7 +293,6 @@ void loop() {
 
   /* Posso construir uma dessas estruturas... */
   if (flag_write == 1) {
-
     Serial.write(out_buffer);
     buffer_clean();
     flag_write = 0;
