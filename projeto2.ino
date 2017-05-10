@@ -1,6 +1,7 @@
+
+
 /* Protocolo de aplicacao - Implementacao usando rotina de interrupcao e
   Baseado no programa do Prof.Tiago F. Tavares
-
   Dimitri Reis
   Guilherme Frauches
 */
@@ -8,6 +9,7 @@
 #include <stdio.h>
 #include <EEPROM.h>
 #include <Wire.h>
+#include <Keypad.h>
 
 /****************************************************** Declaração de variáveis *********************************************/
 /**Conversor ADC**/
@@ -21,6 +23,8 @@ int n_elements;
 /**Teclado Matricial**/
 const int L[3];
 const int C[2];
+#define LED 13;
+int k = 0, med_auto = 0;
 
 /******************************************************** CODIGO PRONTO DO TAVARES***************************************/
 /* Rotina auxiliar para comparacao de strings */
@@ -108,26 +112,33 @@ char read_byte (int address) {
 /************************************************************ FIM EEPROM *********************************************************/
 
 /************************************************************************ TECLADO MATRICIAL **************************************/
-void setup_teclado() {
-  pinMode(L[0], OUTPUT);
-  pinMode(L[1], OUTPUT);
-  pinMode(L[2], OUTPUT);
-  pinMode(L[3], OUTPUT);
+//Definicao da quantidade de linhas e colunas
+const byte LINHAS = 4;
+const byte COLUNAS = 3;
 
-  pinMode(C[0], INPUT_PULLUP);
-  pinMode(C[1], INPUT_PULLUP);
-  pinMode(C[2], INPUT_PULLUP);
+//Matriz de caracteres
+char matriz_teclas[LINHAS][COLUNAS] =
+{
+  {'1', '2', '3'},
+  {'4', '5', '6'},
+  {'7', '8', '9'},
+  {'*', '0', '#'}
+};
 
-  digitalWrite(L[0], HIGH);
-  digitalWrite(L[1], HIGH);
-  digitalWrite(L[2], HIGH);
-  digitalWrite(L[3], HIGH);
-}
+//Definicao dos pinos das linhas
+byte PinosLinhas[LINHAS] = {4, 5, 6, 7};
+//Definicao dos pinos das colunas
+byte PinosColunas[COLUNAS] = {8, 9, 10};
+
+//Inicializa o teclado
+Keypad meuteclado = Keypad( makeKeymap(matriz_teclas), PinosLinhas, PinosColunas, LINHAS, COLUNAS);
+/**************************************************************** FIM TECLADO MATRICIAL ***************************************/
+
+
 /*
   char caracter(int linha, int coluna){
   if(L[0] && L[1]
   }
-
   /*
   int Varredura(){
   int i, j, coluna;
@@ -139,7 +150,6 @@ void setup_teclado() {
     }
   }
   }
-
   função Varredura();
   Para cada pino de saída x[i]:
     Configura x[i] como ativo;
@@ -147,7 +157,6 @@ void setup_teclado() {
       Se y[j] está ativo:
         retorna caractere na posição (i,j);
     Configura x[i] como inativo;
-
   função interrupção_periodica();
   Se nao estou em deboucing:
     A=Varredura();
@@ -160,24 +169,51 @@ void setup_teclado() {
   Decremento contador_deboucing;
   Se contador_deboucning é zero:
     sai do modo deboucing;
-
-
   /*********************************************************************END TECLADO MATRICIAL **************************************/
 
 /* Funcoes internas ao void main() */
 void setup() {
   /* Inicializacao */
+  pinMode(LED, OUTPUT);
+  digitalWrite(LED, LOW);
   buffer_clean();
   flag_check_command = 0;
   Serial.begin(9600);
   Wire.begin();
-  setup_teclado();
 }
 
 void loop() {
-  int x, y, memoria;
-  char out_buffer[20];
+  int x, y, memoria, pisca = 0, timer;
+  char out_buffer[20], teclado[2], tecla_pressionada;
   int flag_write = 0;
+
+  /*Varredura*/
+  tecla_pressionada = meuteclado.getKey();
+  if (tecla_pressionada) {
+    teclado[k] = tecla_pressionada;
+    k++;
+    if (k > 2) {
+      k = 0;
+      flag_check_command == 1;
+    }
+  }
+
+  if (pisca) {
+    if (digitalRead(LED) == HIGH)
+      digitalWrite(LED, LOW);
+    else
+      digitalWrite(LED, HIGH);
+    for (timer = 0, timer <= 1000, timer++)
+    }
+
+  if (med_auto) {
+    // read the analog in value:
+    sensorValue = analogRead(analogInPin) / 4;
+
+    // print the results to the serial monitor:
+    sprintf(out_buffer, "MEASURE = %d\n", sensorValue);
+    flag_write = 1;
+  }
 
   /* A flag_check_command permite separar.... */
   if (flag_check_command == 1) {                             //OK
@@ -199,8 +235,7 @@ void loop() {
 
     else if (str_cmp(Buffer.data, "MEASURE", 7)) {          //OK
       // read the analog in value:
-      sensorValue = map(analogRead(analogInPin), 0, 1023, 0, 255);
-
+      sensorValue = analogRead(analogInPin) / 4;
 
       // print the results to the serial monitor:
       sprintf(out_buffer, "MEASURE = %d\n", sensorValue);
@@ -221,7 +256,7 @@ void loop() {
     }
 
     else if (str_cmp(Buffer.data, "RECORD", 6)) {           //ok
-      sensorValue = map(analogRead(analogInPin), 0, 1023, 0, 255);
+      sensorValue = analogRead(analogInPin) / 4;
       n_elements = read_byte(Index) + 1;
       write_byte(n_elements, sensorValue);
       write_byte(Index, n_elements);
@@ -240,7 +275,34 @@ void loop() {
       }
       flag_write = 1;
     }
+    /**************************** FALTA TESTAR ************************/
+    else if (str_cmp(teclado, "#1*", 3)) { //Pisca um led dizendo que o sitema esta responsivo
+      if (pisca)
+        pisca = 0;
+      else
+        pisca = 1;
+      flag_write = 1;
+    }
 
+    else if (str_cmp(teclado, "#2*", 3)) { //Realiza uma medição e grava o valor na memória
+      sensorValue = analogRead(analogInPin) / 4;
+      n_elements = read_byte(Index) + 1;
+      write_byte(n_elements, sensorValue);
+      write_byte(Index, n_elements);
+      sprintf(out_buffer, "RECORDED %d\n", sensorValue); //apagar depois, é só para testar
+      flag_write = 1;
+    }
+
+    else if (str_cmp(teclado, "#3*", 3)) { //Ativa o modo de medição automatica
+      med_auto = 1;
+      flag_write = 1;
+    }
+
+    else if (str_cmp(teclado, "#4*", 3)) { //Encerra o modo de medição automática
+      med_auto = 0;
+      flag_write = 1;
+    }
+    /********************************************FIM FALTA TESTAR ****************/
     else {                                                    //OK
       sprintf(out_buffer, "ERROR\n");
       flag_write = 1;
@@ -261,7 +323,6 @@ void loop() {
   rEFERENCIAS^: https://www.arduino.cc/en/Tutorial/EEPROMWrite
   http://www.hobbytronics.co.uk/arduino-external-eeprom
   http://pdf.datasheetcatalog.com/datasheet/atmel/doc0180.pdf
-
   Pino EEEPROM - Arduino
   1(A0)- gnd
   2(A1)- gnd
@@ -271,8 +332,6 @@ void loop() {
   6(SCL)- A5 - carrega o sinal de clock
   7(WP)- Gnd
   8(Vcc)- Vcc
-
   0000001101000111
   01000111
-
-***/
+*/
