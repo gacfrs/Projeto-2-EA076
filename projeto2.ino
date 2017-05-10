@@ -1,9 +1,14 @@
-
-
 /* Protocolo de aplicacao - Implementacao usando rotina de interrupcao e
   Baseado no programa do Prof.Tiago F. Tavares
   Dimitri Reis
   Guilherme Frauches
+
+  FALTA CORRIGIR : GET N mostrando valores de 7 bits no lugar de 8 (overrflow negativop)
+                usar fla_check para teclado matricial ?
+                led piscando sem delay
+                tirar os prints onde nao devem estar la (prints anteriores da memoria do buffer ... buffer_clean ta funcinando direito ??)
+                comentar
+                fazer video
 */
 
 #include <stdio.h>
@@ -21,9 +26,8 @@ int n_elements;
 #define Index 0
 
 /**Teclado Matricial**/
-const int L[3];
-const int C[2];
-#define LED 13;
+
+#define ledPin 13
 int k = 0, med_auto = 0;
 
 /******************************************************** CODIGO PRONTO DO TAVARES***************************************/
@@ -134,48 +138,11 @@ byte PinosColunas[COLUNAS] = {8, 9, 10};
 Keypad meuteclado = Keypad( makeKeymap(matriz_teclas), PinosLinhas, PinosColunas, LINHAS, COLUNAS);
 /**************************************************************** FIM TECLADO MATRICIAL ***************************************/
 
-
-/*
-  char caracter(int linha, int coluna){
-  if(L[0] && L[1]
-  }
-  /*
-  int Varredura(){
-  int i, j, coluna;
-  for(i=0; i<=3; i++){
-    digitalWrite(L[i], LOW);
-    for(j=0; j<=2; j++){
-      coluna = digitalRead(C[j]);
-      if (!coluna)
-    }
-  }
-  }
-  função Varredura();
-  Para cada pino de saída x[i]:
-    Configura x[i] como ativo;
-    Para cada pino de entrada y[j]:
-      Se y[j] está ativo:
-        retorna caractere na posição (i,j);
-    Configura x[i] como inativo;
-  função interrupção_periodica();
-  Se nao estou em deboucing:
-    A=Varredura();
-    Se A é um caractere válido:
-      Camada_de_aplicação(A);
-      muda para modo debouncing;
-      contador_deboucing recebe maximo;
-  Se estou em debouycing:
-  //Porcesso analogo ao scheduling
-  Decremento contador_deboucing;
-  Se contador_deboucning é zero:
-    sai do modo deboucing;
-  /*********************************************************************END TECLADO MATRICIAL **************************************/
-
 /* Funcoes internas ao void main() */
 void setup() {
   /* Inicializacao */
-  pinMode(LED, OUTPUT);
-  digitalWrite(LED, LOW);
+  pinMode(ledPin, OUTPUT);
+  digitalWrite(ledPin, LOW);
   buffer_clean();
   flag_check_command = 0;
   Serial.begin(9600);
@@ -183,28 +150,97 @@ void setup() {
 }
 
 void loop() {
-  int x, y, memoria, pisca = 0, timer;
-  char out_buffer[20], teclado[2], tecla_pressionada;
+  int x, y, memoria, pisca = 0, timer, i;
+  char out_buffer[20], teclado[2];
   int flag_write = 0;
 
   /*Varredura*/
-  tecla_pressionada = meuteclado.getKey();
-  if (tecla_pressionada) {
+
+  char tecla_pressionada = meuteclado.getKey();
+
+  if (tecla_pressionada)
+  {
     teclado[k] = tecla_pressionada;
     k++;
+
     if (k > 2) {
+      /**************************** FALTA TESTAR ************************/
+      if (str_cmp(teclado, "#1*", 3)) { //Pisca um led dizendo que o sitema esta responsivo
+        if (pisca)
+          pisca = 0;
+        else
+          pisca = 1;
+        flag_write = 1;
+      }
+
+      else if (str_cmp(teclado, "#2*", 3)) { //Realiza uma medição e grava o valor na memória
+        sensorValue = analogRead(analogInPin) / 4;
+        n_elements = read_byte(Index) + 1;
+        write_byte(n_elements, sensorValue);
+        write_byte(Index, n_elements);
+        sprintf(out_buffer, "RECORDED %d\n", sensorValue); //apagar depois, é só para testar
+        flag_write = 1;
+      }
+
+      else if (str_cmp(teclado, "#3*", 3)) { //Ativa o modo de medição automatica
+        med_auto = 1;
+        flag_write = 1;
+      }
+
+      else if (str_cmp(teclado, "#4*", 3)) { //Encerra o modo de medição automática
+        med_auto = 0;
+        flag_write = 1;
+      }
+      /********************************************FIM FALTA TESTAR ****************/
+
       k = 0;
-      flag_check_command == 1;
+
     }
+
   }
 
-  if (pisca) {
-    if (digitalRead(LED) == HIGH)
-      digitalWrite(LED, LOW);
-    else
-      digitalWrite(LED, HIGH);
-    for (timer = 0, timer <= 1000, timer++)
+
+  /* char tecla_pressionada = meuteclado.getKey();
+    if (tecla_pressionada) {
+     teclado[k] = tecla_pressionada;
+     Serial.println(tecla_pressionada);
+     k++;
+     if (k > 2) {
+       k = 0;
+       flag_check_command == 1;
+     }
     }
+  */
+
+
+  /*
+    if (pisca) {
+      if (digitalRead(ledPin) == HIGH)
+        digitalWrite(ledPin, LOW);
+      else
+        digitalWrite(ledPin, HIGH);
+      for (timer = 0; timer <= 1000; timer++){
+        delay(1);
+
+      }
+    }
+  */
+
+  if (pisca) {
+    if (digitalRead(ledPin) == HIGH)
+      digitalWrite(ledPin, LOW);
+    else
+      digitalWrite(ledPin, HIGH);
+    delay(200);
+    digitalWrite(ledPin, LOW);
+    delay(200);
+    digitalWrite(ledPin, HIGH);
+    delay(200);
+    digitalWrite(ledPin, LOW);
+
+
+  }
+
 
   if (med_auto) {
     // read the analog in value:
@@ -216,7 +252,11 @@ void loop() {
   }
 
   /* A flag_check_command permite separar.... */
-  if (flag_check_command == 1) {                             //OK
+  if (flag_check_command == 1) {
+
+    //OK
+    //     Serial.print("emntewei ");
+    // conclusao: o teclado no loop nao entr=a no flagf_check ==1
     if (str_cmp(Buffer.data, "PING", 4)) {
       sprintf(out_buffer, "PONG\n");
       flag_write = 1;
@@ -275,34 +315,7 @@ void loop() {
       }
       flag_write = 1;
     }
-    /**************************** FALTA TESTAR ************************/
-    else if (str_cmp(teclado, "#1*", 3)) { //Pisca um led dizendo que o sitema esta responsivo
-      if (pisca)
-        pisca = 0;
-      else
-        pisca = 1;
-      flag_write = 1;
-    }
 
-    else if (str_cmp(teclado, "#2*", 3)) { //Realiza uma medição e grava o valor na memória
-      sensorValue = analogRead(analogInPin) / 4;
-      n_elements = read_byte(Index) + 1;
-      write_byte(n_elements, sensorValue);
-      write_byte(Index, n_elements);
-      sprintf(out_buffer, "RECORDED %d\n", sensorValue); //apagar depois, é só para testar
-      flag_write = 1;
-    }
-
-    else if (str_cmp(teclado, "#3*", 3)) { //Ativa o modo de medição automatica
-      med_auto = 1;
-      flag_write = 1;
-    }
-
-    else if (str_cmp(teclado, "#4*", 3)) { //Encerra o modo de medição automática
-      med_auto = 0;
-      flag_write = 1;
-    }
-    /********************************************FIM FALTA TESTAR ****************/
     else {                                                    //OK
       sprintf(out_buffer, "ERROR\n");
       flag_write = 1;
@@ -312,6 +325,7 @@ void loop() {
 
   /* Posso construir uma dessas estruturas... */
   if (flag_write == 1) {
+
     Serial.write(out_buffer);
     buffer_clean();
     flag_write = 0;
