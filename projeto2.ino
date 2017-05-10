@@ -304,7 +304,8 @@ void loop() {
   }
 }
 
-/* Referencias para a implementacao do projeto:
+/* 
+ * Referencias para a implementacao do projeto:
  * Kernel de tempo real e comunicação UART - https://github.com/embarcados-unicamp/rt-kernel/blob/master/src/rtkernel.ino
  * EEPROM - https://www.arduino.cc/en/Tutorial/EEPROMWrite
  * Teclado Matricial - http://www.arduinoecia.com.br/2015/05/teclado-matricial-membrana-4x3-arduino.html
